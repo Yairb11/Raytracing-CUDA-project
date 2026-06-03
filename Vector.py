@@ -2,9 +2,9 @@ import math
 EPSILON = 0.000001
 class Vector:
     def __init__(self, x, y, z):
-        self.x = x
-        self.y = y
-        self.z = z
+        self.x = round(x / EPSILON) * EPSILON
+        self.y = round(y / EPSILON) * EPSILON
+        self.z = round(z / EPSILON) * EPSILON
     def __str__(self):
         return f"({self.x}, {self.y}, {self.z})"
     
@@ -25,5 +25,6 @@ class Vector:
     def cross(self,other):
         return Vector((self.y * other.z - self.z * other.y), (self.z * other.x - self.x * other.z), (self.x * other.y - self.y * other.x))
     
-    def square(self):
-        return math.sqrt(self * self)
+    def normalize(self):
+        amp = 1 / math.sqrt(self * self)
+        return self * amp 
