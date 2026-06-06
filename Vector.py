@@ -18,6 +18,8 @@ class Vector:
         if isinstance(other, Vector):
             return self.x * other.x + self.y * other.y + self.z * other.z
         return Vector(self.x * other, self.y * other, self.z * other)
+    def __rmul__(self, other):
+        return self.__mul__(other)
     
     def __eq__(self, other):
         return abs(self.x - other.x) <= EPSILON and abs(self.y - other.y) <= EPSILON and abs(self.z- other.z) <= EPSILON
@@ -28,3 +30,5 @@ class Vector:
     def normalize(self):
         amp = 1 / math.sqrt(self * self)
         return self * amp 
+    def magnitude(self):
+        return math.sqrt(self * self)

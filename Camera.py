@@ -13,7 +13,7 @@ class Camera:
     def all_rays(self):
         aspect_ratio = self.w/self.h * math.tan(math.radians(self.FOV) / 2)
         NDCx = [(2 * (x+0.5)/self.w - 1) * aspect_ratio for x in range(self.w)]
-        NDCy = [(2 * (y+0.5)/self.h - 1) * aspect_ratio for y in range(self.h)]
+        NDCy = [(-2 * (y+0.5)/self.h + 1) * aspect_ratio for y in range(self.h)]
         rays_xy = []
         for x in range(self.w):
             rays_y = []

@@ -1,41 +1,54 @@
 from Vector import *
 from Ray import *
-EPSILON = 0.000001
+EPSILON = 1e-8
+EPSILON_MOVE = 1e-4
 ZERO_VECTOR = Vector(0, 0, 0)
 class Triangle:
-    def __init__(self, point_a, point_b, point_c):
+    def __init__(self, point_a, point_b, point_c, color = Vector(1, 1, 1)):
         self.point_a = point_a
         self.point_b = point_b
         self.point_c = point_c
+        self.color = color
         self.ba = point_b - point_a
         self.ca = point_c - point_a
-        self.normal = self.ba.cross(self.ca)
+        self.normal = (self.ba.cross(self.ca))
+    
+    def __str__(self):
+        str_a = str(self.point_a)
+        str_b = str(self.point_b)
+        str_c = str(self.point_c)
+        return f"A: {str_a}, B: {str_b}, C: {str_c}"
     
     def collision(self, ray):
-        if self.normal == ZERO_VECTOR:
-            return False, -1
-        parallel_dot = ray.direction * self.normal
-        if(abs(parallel_dot) < EPSILON):
-            return False, -1
-        f = 1.0 / parallel_dot
-        s = self.point_a - ray.origin
-        u = ((-1.0) * f) * (ray.direction * (s.cross(self.ca)))
-        v = (f) * (ray.direction * (s.cross(self.ba)))
-        t = (f) * (s * self.normal)
-        if u > 1.0 or u < 0.0 or v + u > 1.0 or v < 0.0 or t <= EPSILON :
-            return False, -1
-        return True, t
-    
-    def reflaction(self, ray, t):
-        normal = self.normal.normalize()
-        if(ray.direction * normal < 0):
-            
-            position = ray.position_at(t) - (normal * EPSILON)
-        else:
-            position = ray.position_at(t) + (normal * EPSILON)
         d = ray.direction
-        dot = (d * normal)
-        dot *= 2 
-        n = normal * dot
-        ref =  d - n
-        return Ray(position, ref)
+        a = d * (-1 * self.normal)
+        if -EPSILON < a < EPSILON:
+            return False, None
+        f = 1.0 / a
+        s = ray.origin - self.point_a
+        
+        u = (f * d) * (s.cross(self.ca))
+        if u > 0.0 or u < -1.0:
+            return False, None
+        
+        v = (f * d) * (s.cross(self.ba))
+        if v < 0.0 or v-u > 1.0:
+            return False, None
+        
+        t = (f * s) * self.normal
+        if t > EPSILON:
+            return True, t
+        return False, None
+    
+    def normal_from_ray(self, ray):
+        triangle_face = ray.direction * self.normal
+        if(triangle_face > 0):
+            return (-1.0) * self.normal.normalize()
+        else:
+            return self.normal.normalize()
+    
+    def reflection(self, ray, t, normal):
+        hit_point = ray.position_at(t) + EPSILON_MOVE * normal
+        dot_product = ray.direction * normal
+        reflected_direction = ray.direction - (normal * (2.0 * dot_product))
+        return Ray(hit_point, reflected_direction)
