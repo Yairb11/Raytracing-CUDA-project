@@ -25,6 +25,8 @@ class Triangle:
         str_c = str(self.point_c)
         return f"A: {str_a}, B: {str_b}, C: {str_c}"
     
+    
+    
     def collision(self, ray):
         d = ray.direction
         a = d * (-1 * self.normal)
@@ -58,3 +60,11 @@ class Triangle:
         dot_product = ray.direction * normal
         reflected_direction = ray.direction - (normal * (2.0 * dot_product))
         return Ray(hit_point, reflected_direction)
+    
+    def to_list(self):
+        triangle_list = []
+        triangle_list.append(self.point_a.to_list())
+        triangle_list.append(self.point_b.to_list())
+        triangle_list.append(self.point_c.to_list())
+        triangle_list.append(self.color.to_list())
+        return triangle_list

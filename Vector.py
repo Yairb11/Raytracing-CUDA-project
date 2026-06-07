@@ -44,3 +44,6 @@ class Vector:
         max_y = max(self.y, other.y)
         max_z = max(self.z, other.z)
         return Vector(max_x, max_y, max_z)
+    
+    def to_list(self):
+        return [self.x, self.y, self.z]
