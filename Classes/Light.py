@@ -1,7 +1,7 @@
 
 import math
-from Vector import *
-from Ray import *
+from Classes.Vector import *
+from Classes.Ray import *
 EPSILON = 1e-8
 EPSILON_MOVE = 1e-4
 class Light:

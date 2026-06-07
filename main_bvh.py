@@ -1,13 +1,13 @@
-from Ray import *
-from Vector import *
-from Triangle import *
-from Light import *
-from Camera import *
-import BVHNode
-import Blender
-import Image
+from Classes.Ray import *
+from Classes.Vector import *
+from Classes.Triangle import *
+from Classes.Light import *
+from Classes.Camera import *
+import Classes.BVHNode as BVHNode
+import Classes.Blender as Blender
+import Classes.Image as Image
 
-def tracing_ray_bvh(light_list, triangle_bvh, ray):
+def tracing_ray_bvh(light_list, triangle_bvh, ray, MAX_DEPTH):
     current_ray = ray
     final_color = Vector(0, 0, 0)
     attenuation = 1.0
@@ -58,40 +58,42 @@ def tracing_ray_bvh(light_list, triangle_bvh, ray):
                     reflected_color = Vector(hit_object.color.x * light.color.x,
                                             hit_object.color.y * light.color.y,
                                             hit_object.color.z * light.color.z)
-                    light_contribution = reflected_color * (diffuse_intensity / len(lights))
-                    color = color + light_contribution
-                    final_color = final_color + (color * diffusion * attenuation)
+                    color += reflected_color * (diffuse_intensity / len(light_list))
+                    final_color += (color * diffusion * attenuation)
         current_ray = hit_object.reflection(current_ray, closest_t, normal)
         attenuation = attenuation * reflection
     return final_color
         
 
-def tracing_rays_bvh(light_list, triangle_bvh, rays_matrix):
+def tracing_rays_bvh(light_list, triangle_bvh, rays_matrix, W, H, MAX_DEPTH):
     hit_list = []
     for x in range(W):
         hot_list_y = []
         print(f"{round(x * 10000.0 / (W)) / 100}%")
         for y in range(H):
-            collide = tracing_ray_bvh(light_list, triangle_bvh, rays_matrix[x][y])
+            collide = tracing_ray_bvh(light_list, triangle_bvh, rays_matrix[x][y], MAX_DEPTH)
             hot_list_y.append(collide)
         hit_list.append(hot_list_y)
     return hit_list
 
-    
-W = 1920
-H = 1080
-MAX_DEPTH = 20
 
-def start_engine(camera, lights, name):
+def start_engine(W, H, MAX_DEPTH, camera, lights, name, adding_to_image):
     vertices, faces = Blender.extract_triangles(rf"input\{name}.obj")
     triangles = Blender.create_all_triangles(vertices, faces)
     triangles_bvh = BVHNode.build_bvh(triangles, 2)
     rays_xy = camera.all_rays()
-    hit_list = tracing_rays_bvh(lights, triangles_bvh, rays_xy)
-    Image.create_image(W, H, hit_list, f"{name}_Test_3")
+    hit_list = tracing_rays_bvh(lights, triangles_bvh, rays_xy, W, H, MAX_DEPTH)
+    Image.create_image(W, H, hit_list, f"{name}_{adding_to_image}")
+
+def main():
+    W = 1920
+    H = 1080
+    MAX_DEPTH = 1
+    name = "monkey"
+    adding_to_image = "Test_BVH"
+    camera = Camera(W, H, origin= Vector(0, 0, -3), target=Vector(0, 0, -2), up_vector=Vector(0, 1, 0), FOV=90)
+    lights = [Light(Vector(10,0,0), 1), Light(Vector(-10,0,0), 1), Light(Vector(0,-10,0), 1), Light(Vector(0,10,0), 1), Light(Vector(0, 0, 10), 1), Light(Vector(0, 0, -10), 1)]
+    start_engine(W, H, MAX_DEPTH,  camera, lights, name, adding_to_image)
 
 if __name__ == "__main__":
-    name = "monkey"
-    camera = Camera(W, H, origin= Vector(0, 0, -3), target=Vector(0, 0, -2), up_vector=Vector(0, 1, 0), FOV=90)
-    lights = [Light(Vector(0,0,-10), 1)]
-    start_engine(camera, lights, name)
+    main()

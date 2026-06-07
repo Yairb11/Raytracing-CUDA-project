@@ -1,5 +1,5 @@
-from Vector import *
-from Ray import *
+from Classes.Vector import *
+from Classes.Ray import *
 import math
 class Camera:
     def __init__(self, W, H, origin, target, up_vector, FOV):
@@ -39,7 +39,7 @@ class Camera:
             right_part = self.right * NDCx[x]
             for y in range(self.h):
                 up_part = self.up * NDCy[y]
-                dir = right_part + up_part + self.forword
+                dir = (right_part + up_part + self.forword).normalize()
                 ray_origin = self.origin.to_list()
                 ray_dir = dir.to_list()
                 ray_origin_y.append(ray_origin)

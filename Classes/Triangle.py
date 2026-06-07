@@ -1,6 +1,6 @@
-from Vector import *
-from Ray import *
-from AABB import *
+from Classes.Vector import *
+from Classes.Ray import *
+from Classes.AABB import *
 EPSILON = 1e-8
 EPSILON_MOVE = 1e-4
 ZERO_VECTOR = Vector(0, 0, 0)
@@ -56,7 +56,7 @@ class Triangle:
             return self.normal.normalize()
     
     def reflection(self, ray, t, normal):
-        hit_point = ray.position_at(t) + EPSILON_MOVE * normal
+        hit_point = ray.position_at(t) + EPSILON_MOVE * normal  
         dot_product = ray.direction * normal
         reflected_direction = ray.direction - (normal * (2.0 * dot_product))
         return Ray(hit_point, reflected_direction)
@@ -66,5 +66,4 @@ class Triangle:
         triangle_list.append(self.point_a.to_list())
         triangle_list.append(self.point_b.to_list())
         triangle_list.append(self.point_c.to_list())
-        triangle_list.append(self.color.to_list())
         return triangle_list

@@ -1,4 +1,4 @@
-from Vector import *
+from Classes.Vector import *
 class Ray:
     def __init__(self, origin, direction):
         self.origin = origin

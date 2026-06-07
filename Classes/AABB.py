@@ -1,5 +1,5 @@
-from Vector import *
-from Ray import *
+from Classes.Vector import *
+from Classes.Ray import *
 import math
 
 class AABB:

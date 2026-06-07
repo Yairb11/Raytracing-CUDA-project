@@ -1,6 +1,6 @@
-from AABB import *
-from Triangle import *
-from Vector import *
+from Classes.AABB import *
+from Classes.Triangle import *
+from Classes.Vector import *
 import math
 
 class BVHNode:

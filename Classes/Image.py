@@ -1,5 +1,5 @@
 from PIL import Image
-from Vector import *
+from Classes.Vector import *
 def create_image(w, h, hit_list, name):
     img = Image.new('RGB', (w, h), color=(0, 0, 0))
     pixels = img.load()
