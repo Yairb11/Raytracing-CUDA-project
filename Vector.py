@@ -32,3 +32,15 @@ class Vector:
         return self * amp 
     def magnitude(self):
         return math.sqrt(self * self)
+    
+    def min(self, other):
+        min_x = min(self.x, other.x)
+        min_y = min(self.y, other.y)
+        min_z = min(self.z, other.z)
+        return Vector(min_x, min_y, min_z)
+    
+    def max(self, other):
+        max_x = max(self.x, other.x)
+        max_y = max(self.y, other.y)
+        max_z = max(self.z, other.z)
+        return Vector(max_x, max_y, max_z)

@@ -1,5 +1,6 @@
 from Vector import *
 from Ray import *
+from AABB import *
 EPSILON = 1e-8
 EPSILON_MOVE = 1e-4
 ZERO_VECTOR = Vector(0, 0, 0)
@@ -12,6 +13,11 @@ class Triangle:
         self.ba = point_b - point_a
         self.ca = point_c - point_a
         self.normal = (self.ba.cross(self.ca))
+        
+        self.bmin = point_a.min(point_b.min(point_c))
+        self.bmax = point_a.max(point_b.max(point_c))
+        self.aabb = AABB(self.bmin, self.bmax)
+        self.centroid = (point_a + point_b + point_c) * (1.0 / 3.0)
     
     def __str__(self):
         str_a = str(self.point_a)
