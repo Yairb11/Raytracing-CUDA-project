@@ -63,5 +63,40 @@ def hit_bvh(root_nood, ray):
             if node.left:
                 stack_node.append(node.left)
     return hit_object, closest_t
+
+def flatten_bvh(root_node):
+    if root_node is None:
+        return None
+    flat_border = []
+    flat_child = []
+    flat_triangle_indexes = []
     
+    ordered_triangles_points = []   
+    ordered_triangles_color = []   
+    stack = [(root_node, -1, False)]
+    while len(stack) > 0:
+        node, parent_index, is_left_child = stack.pop()
+        current_index = len(flat_border)
+        if parent_index != -1:
+            if is_left_child:
+                flat_child[parent_index][0] = current_index
+            else:
+                flat_child[parent_index][1] = current_index
         
+        flat_border.append([node.aabb.bmin.to_list(), node.aabb.bmax.to_list()])
+        flat_child.append([-1, -1])
+        flat_triangle_indexes.append([])
+        
+        if node.is_leaf:
+            start_idx = len(ordered_triangles_points)
+            flat_triangle_indexes[current_index] = [start_idx, len(node.triangles)]
+            for triangle in node.triangles:
+                ordered_triangles_points.append(triangle.to_list())
+                ordered_triangles_color.append(triangle.color.to_list())
+        else:
+            flat_triangle_indexes[current_index] = [-1, -1]
+            if node.right:
+                stack.append((node.right, current_index, False))
+            if node.left:
+                stack.append((node.left, current_index, True))
+    return flat_border, flat_child, flat_triangle_indexes, ordered_triangles_points, ordered_triangles_color
