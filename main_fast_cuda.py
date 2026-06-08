@@ -6,7 +6,7 @@ from Classes.Light import *
 from Classes.Camera import *
 import Classes.Blender as Blender
 import Classes.Image as Image
-import Classes.CudaFunctions as CudaFunctions
+import Classes.FastCudaFunctions as FastCudaFunctions
 import Classes.BVHNode as BVHNode
 import time 
 
@@ -22,23 +22,26 @@ def light_to_cuda(lights):
 
 
 def start_engine(W, H, MAX_DEPTH, camera, lights, name, adding_to_image):
-    start1_time = time.time()
     vertices, faces = Blender.extract_triangles(rf"input\{name}.obj")
     triangles = Blender.create_all_triangles(vertices, faces)
     bvh_triangles = BVHNode.build_bvh(triangles)
     bvh_border, bvh_child, bvh_triangles_indexes, bvh_ordered_triangles_points, bvh_ordered_triangles_color = BVHNode.flatten_bvh(bvh_triangles)
     lights_position, lights_radius, lights_color = light_to_cuda(lights)
-    start_time = time.time()
+    print("not start")
+    hit_list = FastCudaFunctions.render_scene_gpu(16, 0, 
+                                            camera, 
+                                            bvh_border, bvh_child, bvh_triangles_indexes, bvh_ordered_triangles_points, bvh_ordered_triangles_color, 
+                                            lights_position, lights_radius, lights_color)
     print("start")
-    hit_list = CudaFunctions.render_scene_gpu(16, MAX_DEPTH, 
+    start_time = time.time()
+    hit_list = FastCudaFunctions.render_scene_gpu(16, MAX_DEPTH, 
                                             camera, 
                                             bvh_border, bvh_child, bvh_triangles_indexes, bvh_ordered_triangles_points, bvh_ordered_triangles_color, 
                                             lights_position, lights_radius, lights_color)
     end_time = time.time()
     print("image")
     Image.create_image_cuda(W, H, hit_list, f"{name}_{adding_to_image}_{end_time-start_time}")
-    finish_time = time.time()
-    print(f"Setup: {start_time-start1_time}\nProcessing: {end_time-start_time}\nCreating: {finish_time - end_time}\nAll: {finish_time-start1_time}")
+    print(f"\n\n\nInfo: {W} x {H} -> Depth: {MAX_DEPTH}, Faces: {len(triangles)}\nProcessing: {end_time-start_time} seconds\n")
 
 
 def main():

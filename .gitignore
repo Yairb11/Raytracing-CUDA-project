@@ -1,5 +1,5 @@
 __pycache__/
 .venv/
 output/
+Classes/__pycache__/
 input/
-uv.lock

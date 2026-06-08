@@ -180,6 +180,33 @@ def traverse_bvh(origin, dir, bvh_border, bvh_child, bvh_triangles_indexes, bvh_
                 stack[stack_ptr] = bvh_child[current_node, 0]
                 stack_ptr += 1
                 stack[stack_ptr] = bvh_child[current_node, 1]
+    
+@cuda.jit(device=True)
+def shadow_traverse_bvh(origin, dir, bvh_border, bvh_child, bvh_triangles_indexes, bvh_ordered_triangles_points, light_time):
+    stack = cuda.local.array(32, dtype=np.int32)
+    stack_ptr = 0
+    stack[stack_ptr] = 0
+    
+    while stack_ptr >= 0:
+        current_node = stack[stack_ptr]
+        stack_ptr -= 1
+        if intersect_box(origin, dir, bvh_border[current_node]):
+            if bvh_child[current_node, 0] == -1:
+                start = bvh_triangles_indexes[current_node, 0]
+                end = bvh_triangles_indexes[current_node, 1]
+                for i in range(start, start + end):
+                    a = bvh_ordered_triangles_points[i, 0]
+                    b = bvh_ordered_triangles_points[i, 1]
+                    c = bvh_ordered_triangles_points[i, 2]
+                    t = intersect_triangle(origin, dir, a, b, c)
+                    if 0.0001 < t and light_time > t:
+                        return True
+            else:
+                stack_ptr += 1
+                stack[stack_ptr] = bvh_child[current_node, 0]
+                stack_ptr += 1
+                stack[stack_ptr] = bvh_child[current_node, 1]
+    return False
 
 @cuda.jit
 def raytrace_kernel(max_depth,
@@ -202,15 +229,15 @@ def raytrace_kernel(max_depth,
         origin[i] = camera_vectors[0, i]
         NDCx = np.float32((2 * (x+0.5)/len(output_colors) - 1) * aspect_ratio[0])
         NDCy = np.float32((-2 * (y+0.5)/len(output_colors[0]) + 1) * aspect_ratio[0])
-        dir[i] = NDCx * camera_vectors[2, i]
-        dir[i] += NDCy * camera_vectors[3, i]
-        dir[i] += camera_vectors[1, i] 
+        dir[i] = np.float32(NDCx * camera_vectors[2, i])
+        dir[i] += np.float32(NDCy * camera_vectors[3, i])
+        dir[i] += np.float32(camera_vectors[1, i])
     normalize(dir)
     
-    ambient_intensity = 0.2
-    attenuation = 1.0
-    reflection = 0.3
-    diffusion = 1.0 - reflection
+    ambient_intensity = np.float32(0.2)
+    attenuation = np.float32(1.0)
+    reflection = np.float32(0.3)
+    diffusion = np.float32(1.0 - reflection)
     
     for depth in range(max_depth):
         traverse_bvh(origin, dir, bvh_border, bvh_child, bvh_triangles_indexes, bvh_ordered_triangles_points, hit)
@@ -223,14 +250,14 @@ def raytrace_kernel(max_depth,
             r = lights_radius[i]
             t = intersect_light(origin, dir, p, r)
             if t > 0 and t < hit[0]:
-                hit[0] = t * 1.0
-                hit[1] = i * 1.0
+                hit[0] = np.float32(t * 1.0)
+                hit[1] = np.float32(i * 1.0)
                 hit_type = "l"
                 
         if hit_type == "l":
-            output_colors[x, y, 0] += lights_color[int(hit[1]), 0] * attenuation
-            output_colors[x, y, 1] += lights_color[int(hit[1]), 1] * attenuation
-            output_colors[x, y, 2] += lights_color[int(hit[1]), 2] * attenuation
+            output_colors[x, y, 0] += np.float32(lights_color[int(hit[1]), 0] * attenuation)
+            output_colors[x, y, 1] += np.float32(lights_color[int(hit[1]), 1] * attenuation)
+            output_colors[x, y, 2] += np.float32(lights_color[int(hit[1]), 2] * attenuation)
             break
         elif hit_type == "t":
             hit_point = cuda.local.array(3, dtype=np.float32)
@@ -238,7 +265,6 @@ def raytrace_kernel(max_depth,
             shadow_origin = cuda.local.array(3, dtype=np.float32)
             color = cuda.local.array(3, dtype=np.float32)
             shadow_dir = cuda.local.array(3, dtype=np.float32)
-            shadow_hit = cuda.local.array(2, dtype=np.float32)
             position_at(origin, dir, hit[0], hit_point)
             normal_from_ray(dir, bvh_ordered_triangles_points[int(hit[1]), 0], bvh_ordered_triangles_points[int(hit[1]), 1], bvh_ordered_triangles_points[int(hit[1]), 2], normal)
             shifted_from_hit(hit_point, normal, shadow_origin)
@@ -251,16 +277,15 @@ def raytrace_kernel(max_depth,
                 shadow_dir[2] = lights_pos[i2, 2] - shadow_origin[2]
                 normalize(shadow_dir)
                 t_light = intersect_light(shadow_origin, shadow_dir, lights_pos[i2], lights_radius[i2])
-                traverse_bvh(shadow_origin, shadow_dir, bvh_border, bvh_child, bvh_triangles_indexes, bvh_ordered_triangles_points, shadow_hit)
-                in_shadow = shadow_hit[1] > -1 and shadow_hit[0] < t_light
+                in_shadow = shadow_traverse_bvh(shadow_origin, shadow_dir, bvh_border, bvh_child, bvh_triangles_indexes, bvh_ordered_triangles_points, t_light)
                 if not in_shadow:
-                    diffuse_intensity = max(0.0, dot_product(normal, shadow_dir))
-                    color[0] += bvh_ordered_triangles_color[int(hit[1]), 0] * lights_color[i2, 0] * (diffuse_intensity  / len(lights_pos))
-                    color[1] += bvh_ordered_triangles_color[int(hit[1]), 1] * lights_color[i2, 1] * (diffuse_intensity / len(lights_pos))
-                    color[2] += bvh_ordered_triangles_color[int(hit[1]), 2] * lights_color[i2, 2] * (diffuse_intensity  / len(lights_pos))
-                    output_colors[x, y, 0] += (diffusion * attenuation * color[0])
-                    output_colors[x, y, 1] += (diffusion * attenuation * color[1])
-                    output_colors[x, y, 2] += (diffusion * attenuation * color[2])
+                    diffuse_intensity = np.float32(max(0.0, dot_product(normal, shadow_dir)))
+                    color[0] += np.float32(bvh_ordered_triangles_color[int(hit[1]), 0] * lights_color[i2, 0] * (diffuse_intensity  / len(lights_pos)))
+                    color[1] += np.float32(bvh_ordered_triangles_color[int(hit[1]), 1] * lights_color[i2, 1] * (diffuse_intensity / len(lights_pos)))
+                    color[2] += np.float32(bvh_ordered_triangles_color[int(hit[1]), 2] * lights_color[i2, 2] * (diffuse_intensity  / len(lights_pos)))
+                    output_colors[x, y, 0] += np.float32((diffusion * attenuation * color[0]))
+                    output_colors[x, y, 1] += np.float32((diffusion * attenuation * color[1]))
+                    output_colors[x, y, 2] += np.float32((diffusion * attenuation * color[2]))
         else:
             break
         attenuation = attenuation * reflection
