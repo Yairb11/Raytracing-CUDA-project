@@ -1,14 +1,15 @@
 from Classes.Vector import *
 from Classes.Ray import *
+from Classes.Light import *
 import math
 class Camera:
     def __init__(self, W, H, origin, target, up_vector, FOV):
         self.w = W
         self.h = H
         self.origin = origin
-        self.forword = (target - origin).normalize()
-        self.right = up_vector.cross(self.forword).normalize()
-        self.up = self.forword.cross(self.right).normalize()
+        self.forward  = (target - origin).normalize()
+        self.right = up_vector.cross(self.forward ).normalize()
+        self.up = self.forward .cross(self.right).normalize()
         self.FOV = FOV
         self.aspect_ratio = self.w/self.h * math.tan(math.radians(self.FOV) / 2)
     def all_rays(self):
@@ -21,7 +22,7 @@ class Camera:
             right_part = self.right * NDCx[x]
             for y in range(self.h):
                 up_part = self.up * NDCy[y]
-                dir = right_part + up_part + self.forword
+                dir = right_part + up_part + self.forward 
                 ray = Ray(self.origin, dir)
                 rays_y.append(ray)
             rays_xy.append(rays_y)
@@ -38,7 +39,7 @@ class Camera:
             right_part = self.right * NDCx[x]
             for y in range(self.h):
                 up_part = self.up * NDCy[y]
-                dir = (right_part + up_part + self.forword).normalize()
+                dir = (right_part + up_part + self.forward ).normalize()
                 ray_origin = self.origin.to_list()
                 ray_dir = dir.to_list()
                 ray_origin_y.append(ray_origin)
@@ -50,7 +51,11 @@ class Camera:
     def to_list(self):
         camera_list = []
         camera_list.append(self.origin.to_list())
-        camera_list.append(self.forword.to_list())
+        camera_list.append(self.forward .to_list())
         camera_list.append(self.right.to_list())
         camera_list.append(self.up.to_list())
         return camera_list
+    
+    def create_light_behind(self, radius, color=Vector(1, 1, 1)):
+        vector_light=self.origin - self.forward 
+        return Light(vector_light, radius, color=color)

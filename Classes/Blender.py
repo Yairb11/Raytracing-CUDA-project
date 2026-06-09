@@ -28,7 +28,7 @@ def create_all_triangles(vertices, faces):
         positions.append(position)
     triangles = [] 
     for _, f in enumerate(faces):
-        triangle = Triangle(positions[f[0]], positions[f[1]], positions[f[2]], color = Vector(1,0, 0))
+        triangle = Triangle(positions[f[0]], positions[f[1]], positions[f[2]], color = Vector(1, 1, 1))
         triangles.append(triangle)
     return triangles 
 
@@ -44,4 +44,3 @@ def create_all_triangles_cuda(vertices, faces):
         triangles_points.append(triangle.to_list())
         triangles_color.append(triangle.color.to_list())
     return triangles_points, triangles_color
-    

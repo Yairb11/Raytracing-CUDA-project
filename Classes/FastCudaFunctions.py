@@ -212,8 +212,10 @@ def shadow_traverse_bvh(origin, dir, bvh_border, bvh_child, bvh_triangles_indexe
 def raytrace_kernel(max_depth,
                         camera_vectors, aspect_ratio, 
                         bvh_border, bvh_child, bvh_triangles_indexes, bvh_ordered_triangles_points, bvh_ordered_triangles_color, 
-                        lights_pos, lights_radius, lights_color, 
+                        lights_pos, lights_radius, lights_color,
                         output_colors):
+    if(max_depth == -1):
+        return
     x, y = cuda.grid(2)
     if x >= len(output_colors) or y >= len(output_colors[0]):
         return
@@ -234,7 +236,7 @@ def raytrace_kernel(max_depth,
         dir[i] += np.float32(camera_vectors[1, i])
     normalize(dir)
     
-    ambient_intensity = np.float32(0.2)
+    ambient_color = np.float32(0.2)
     attenuation = np.float32(1.0)
     reflection = np.float32(0.3)
     diffusion = np.float32(1.0 - reflection)
@@ -258,6 +260,7 @@ def raytrace_kernel(max_depth,
             output_colors[x, y, 0] += np.float32(lights_color[int(hit[1]), 0] * attenuation)
             output_colors[x, y, 1] += np.float32(lights_color[int(hit[1]), 1] * attenuation)
             output_colors[x, y, 2] += np.float32(lights_color[int(hit[1]), 2] * attenuation)
+            
             break
         elif hit_type == "t":
             hit_point = cuda.local.array(3, dtype=np.float32)
@@ -268,9 +271,9 @@ def raytrace_kernel(max_depth,
             position_at(origin, dir, hit[0], hit_point)
             normal_from_ray(dir, bvh_ordered_triangles_points[int(hit[1]), 0], bvh_ordered_triangles_points[int(hit[1]), 1], bvh_ordered_triangles_points[int(hit[1]), 2], normal)
             shifted_from_hit(hit_point, normal, shadow_origin)
-            color[0] = 1 * ambient_intensity
-            color[1] = 0
-            color[2] = 0
+            color[0] = bvh_ordered_triangles_color[int(hit[1]), 0] * ambient_color
+            color[1] = bvh_ordered_triangles_color[int(hit[1]), 1] * ambient_color
+            color[2] = bvh_ordered_triangles_color[int(hit[1]), 2] * ambient_color
             for i2 in range(len(lights_pos)):
                 shadow_dir[0] = lights_pos[i2, 0] - shadow_origin[0]
                 shadow_dir[1] = lights_pos[i2, 1] - shadow_origin[1]
@@ -290,7 +293,10 @@ def raytrace_kernel(max_depth,
             break
         attenuation = attenuation * reflection
         copy(hit_point, origin)
-        reflection_ray(normal, dir) 
+        reflection_ray(normal, dir)
+    output_colors[x, y, 0] = min(output_colors[x, y, 0] * 255, 255)
+    output_colors[x, y, 1] = min(output_colors[x, y, 1] * 255, 255)
+    output_colors[x, y, 2] = min(output_colors[x, y, 2] * 255, 255)
 
 def render_scene_gpu(n, max_depth,  
                         camera, 
@@ -335,7 +341,7 @@ def render_scene_gpu(n, max_depth,
         int(max_depth),
         d_camera_vectors, d_camera_aspect, 
         d_bvh_border_list, d_bvh_child , d_bvh_triangles_indexes, d_bvh_ordered_triangles_points, d_bvh_ordered_triangles_color,
-        d_lights_position, d_lights_radius, d_lights_color, 
+        d_lights_position, d_lights_radius, d_lights_color,
         d_output
     )
     
